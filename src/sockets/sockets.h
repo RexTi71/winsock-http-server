@@ -21,6 +21,8 @@ private:
     void acceptingConnection(SOCKET& client_socket);
     void listenOnIpAddress();
     void throwWsaMessage(std::string message);
+    void receiveRequest(SOCKET& client_socket);
+    void closeConnection(SOCKET& client_socket);
 };
 
 #endif //WEBSERVER_SOCKETS_H

@@ -6,17 +6,19 @@
 
 #include <format>
 #include <cstdio>
+#include <fstream>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include "web_socket_exception.h"
+#include "../parsers/http_request.h"
 
 #define PORT "6702"
-#define BUFFER_LEN 1024
+#define BUFFER_LEN 4096
 
 SocketManager::SocketManager() {
      error_code = WSAStartup(MAKEWORD(2,2),&wsa_data);
      if (error_code != 0) {
-          throw WebSocketException(std::format("Could Not Start Socket, error code: {}", error_code));
+          throw WebSocketException(std::format("Could not start socket, error code: {}", error_code));
      }
 }
 SocketManager::~SocketManager() {
@@ -46,18 +48,10 @@ void SocketManager::createSocket() {
      }
      bindSocket(result);
      listenOnIpAddress();
-
      SOCKET client_socket = INVALID_SOCKET;
      acceptingConnection(client_socket);
-
-     char rec_buf[BUFFER_LEN];
-     do{
-          error_code = recv(client_socket, rec_buf, BUFFER_LEN, 0);
-          printf("Received: %s",rec_buf);
-          error_code = send(client_socket, rec_buf,error_code, 0);
-          printf("Sent back: %s", rec_buf);
-     }while (error_code > 0);
-
+     receiveRequest(client_socket);
+     closeConnection(client_socket);
      closesocket(client_socket);
 }
 
@@ -74,20 +68,86 @@ void SocketManager::listenOnIpAddress() {
      if (listen(listen_socket, SOMAXCONN) == SOCKET_ERROR) {
           throwWsaMessage("Couldn't listen on server socket");
      }
+     printf("Server is listening on port: %s\n", PORT);
 }
 
 void SocketManager::acceptingConnection(SOCKET& client_socket) {
-
-     client_socket = accept(listen_socket, nullptr, nullptr);
+     sockaddr_in connecting_address;
+     socklen_t connecting_adress_len = sizeof(connecting_address);
+     client_socket = accept(listen_socket, (sockaddr*) &connecting_address, &connecting_adress_len);
 
      if (client_socket == INVALID_SOCKET) {
           throwWsaMessage("Couldn't setup connection handling on socket");
      }
+     printf("Received connection from address: %s\n", inet_ntoa(connecting_address.sin_addr));
      closesocket(listen_socket);
 }
 
 void SocketManager::throwWsaMessage(std::string message){
      int wsa_err = WSAGetLastError();
-     throw WebSocketException(std::format("{},error code: {}",message, wsa_err));
+     throw WebSocketException(std::format("{}, error code: {}",message, wsa_err));
+}
+
+void SocketManager::receiveRequest(SOCKET& client_socket) {
+     char rec_buf[BUFFER_LEN];
+     memset(rec_buf,0,BUFFER_LEN);
+
+     do{
+          error_code = recv(client_socket, rec_buf, BUFFER_LEN, 0);
+
+          if (error_code == SOCKET_ERROR) {
+               closesocket(client_socket);
+               throwWsaMessage("Couldn't receive client request");
+          }else if (error_code == 0) {
+               printf("Connection closed successfully!");
+               break;
+          }
+
+          printf("Received: %s",rec_buf);
+          std::string request = rec_buf;
+          http_request::parseRequest(request);
+
+          const int first_space = request.find(' ');
+          std::string method = request.substr(0, first_space);
+          const int second_space = request.find(' ', first_space + 1);
+          std::string url = request.substr(first_space + 1, second_space - first_space - 1);
+
+          std::string response;
+          if (method == "GET") {
+               std::string file_path = ".." + url;
+               std::ifstream file(file_path, std::ios::binary | std::ios::ate);
+               if (file) {
+                    std::streamsize file_size = file.tellg();
+                    file.seekg(0, std::ios::beg);
+
+                    std::string body(file_size, '\0');
+                    file.read(body.data(), file_size);
+
+
+                    response = std::format("HTTP/1.1 200 OK\r\nContent-Length:{}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n",(long)file_size);
+                    response += body;
+               }else {
+                    response = "HTTP/1.1 404 NOT FOUND\r\nContent-Type: text/plain\r\n\r\nResource not found\r\n\r\n";
+               }
+          printf("Sent back: %s",response.c_str());
+          }
+
+          memset(rec_buf,0,BUFFER_LEN);
+
+          error_code = send(client_socket, response.c_str(),response.length(), 0);
+
+          if (error_code == SOCKET_ERROR) {
+               closesocket(client_socket);
+               throwWsaMessage("Couldn't send response to client");
+          }
+     }while (error_code > 0);
+}
+
+void SocketManager::closeConnection(SOCKET& client_socket) {
+     error_code = shutdown(client_socket, SD_SEND);
+     if (error_code == SOCKET_ERROR) {
+          closesocket(client_socket);
+          throwWsaMessage("Couldn't close connection gracefully");
+     }
 }
 

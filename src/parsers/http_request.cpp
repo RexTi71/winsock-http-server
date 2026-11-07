@@ -3,11 +3,14 @@
 //
 
 #include "http_request.h"
+
+#include <stdexcept>
+
 namespace {
+    const std::string ENDLINE_PATTERN("\r\n");
     std::map<std::string,std::string> parseHeaders(std::string& request) {
 
         std::map<std::string,std::string> headers;
-        const std::string ENDLINE_PATTERN("\r\n");
         int line_end_index = request.find(ENDLINE_PATTERN);
         int semicolomn_index = -1;
 
@@ -27,48 +30,62 @@ namespace {
         }while(semicolomn_index != request.npos);
         return headers;
     }
+    std::string parseBody(std::string& request) {
+        const unsigned __int8 BODY_START_INDEX = request.find_last_of(ENDLINE_PATTERN) + ENDLINE_PATTERN.length() - 1;
+        return request.substr(BODY_START_INDEX);
+    }
 }
 namespace http_request {
+    std::string getMethodName(const Method& method) {
+        switch (method) {
+            case Get: return "GET";
+            case Post: return "POST";
+            case Delete: return "DELETE";
+            case Put: return "PUT";
+            case Patch: return "PATCH";
+            default: return "";
+        }
+    }
 
-void parseRequest(std::string& request) {
+    Method convertStrToMethodName(const std::string& input) {
 
-    //GET / HTTP/1.1
-    //Host: 127.0.0.1:6702
-    //User-Agent: curl/8.21.0
-    //Accept: */*
+        if (input == "GET") {
+            return Get;
+        }if (input == "POST") {
+            return Post;
+        }if (input == "DELETE") {
+            return Delete;
+        }if (input == "PUT") {
+            return Put;
+        }if (input == "PATCH") {
+            return Patch;
+        }
+        throw std::runtime_error("Failed to convert string");
 
-    //TODO: zapobieganie blednym requestem, nie zawsze dostane to co chce
-    http_request::request request_struct;
+    }
+    request parseRequest(std::string& request) {
 
-    const int FIRST_SPACE = request.find(' ');
-    request_struct.method = request.substr(0, FIRST_SPACE);
 
-    const int SECOND_SPACE = request.find(' ', FIRST_SPACE + 1);
-    request_struct.url = request.substr(FIRST_SPACE + 1, SECOND_SPACE - FIRST_SPACE - 1);
+        //TODO: zapobieganie blednym requestem, nie zawsze dostane to co chce
+        http_request::request request_struct;
 
-    const int VERSION_INDEX = request.find_last_of("HTTP/") + 1;
-    constexpr unsigned __int8 VERSION_LENGTH = 3;
-    request_struct.version = request.substr(VERSION_INDEX,VERSION_LENGTH);
+        const int FIRST_SPACE = request.find(' ');
+        request_struct.method = convertStrToMethodName(request.substr(0, FIRST_SPACE));
 
-    request_struct.headers = parseHeaders(request);
-    std::string response;
-    // if (method == "GET") {
-    //     std::string file_path = ".." + url;
-    //     std::ifstream file(file_path, std::ios::binary | std::ios::ate);
-    //     if (file) {
-    //         std::streamsize file_size = file.tellg();
-    //         file.seekg(0, std::ios::beg);
-    //
-    //         std::string body(file_size, '\0');
-    //         file.read(body.data(), file_size);
-    //
-    //
-    //         response = std::format("HTTP/1.1 200 OK\r\nContent-Length:{}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n",(long)file_size);
-    //         response += body;
-    //     }else {
-    //         response = "HTTP/1.1 404 NOT FOUND\r\nContent-Type: text/plain\r\n\r\nResource not found\r\n\r\n";
-    //     }
-    //     printf("Sent back: %s",response.c_str());
-    // }
+        const int SECOND_SPACE = request.find(' ', FIRST_SPACE + 1);
+        request_struct.url = request.substr(FIRST_SPACE + 1, SECOND_SPACE - FIRST_SPACE - 1);
+
+        const int VERSION_INDEX = request.find("HTTP/") + 5;
+        constexpr unsigned __int8 VERSION_LENGTH = 3;
+        request_struct.version = request.substr(VERSION_INDEX,VERSION_LENGTH);
+
+        request_struct.headers = parseHeaders(request);
+
+        if (request_struct.method == Post) {
+            request_struct.body = parseBody(request);
+        }
+        return request_struct;
+    }
 }
-}
+
+

@@ -8,15 +8,24 @@
 #include <map>
 
 namespace http_request {
+    enum Method {
+        Get,
+        Post,
+        Delete,
+        Put,
+        Patch
+    };
+    std::string getMethodName(const Method& method);
+    Method convertStrToMethodName(const std::string& input);
 
     struct request {
-        std::string method;
+        Method method;
         std::string url;
         std::string version;
         std::map<std::string,std::string> headers;
         std::string body;
     };
 
-    void parseRequest(std::string& request);
+    request parseRequest(std::string& request);
 }
 #endif //WEBSERVER_HTTP_REQUEST_H

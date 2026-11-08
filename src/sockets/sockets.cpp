@@ -6,11 +6,13 @@
 
 #include <format>
 #include <cstdio>
+#include <iostream>
 #include <fstream>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include "web_socket_exception.h"
 #include "../parsers/http_request.h"
+#include "../parsers/http_response.h"
 
 #define PORT "6702"
 #define BUFFER_LEN 4096
@@ -105,36 +107,20 @@ void SocketManager::receiveRequest(SOCKET& client_socket) {
 
           printf("Received: %s",rec_buf);
           std::string request = rec_buf;
-          http_request::parseRequest(request);
+          http_request::request request_struct = http_request::parseRequest(request);
+          http_response::response response_struct = http_response::createResponse(request_struct);
+          int response_size = 9999;
 
-          const int first_space = request.find(' ');
-          std::string method = request.substr(0, first_space);
-          const int second_space = request.find(' ', first_space + 1);
-          std::string url = request.substr(first_space + 1, second_space - first_space - 1);
-
-          std::string response;
-          if (method == "GET") {
-               std::string file_path = ".." + url;
-               std::ifstream file(file_path, std::ios::binary | std::ios::ate);
-               if (file) {
-                    std::streamsize file_size = file.tellg();
-                    file.seekg(0, std::ios::beg);
-
-                    std::string body(file_size, '\0');
-                    file.read(body.data(), file_size);
-
-
-                    response = std::format("HTTP/1.1 200 OK\r\nContent-Length:{}\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n",(long)file_size);
-                    response += body;
-               }else {
-                    response = "HTTP/1.1 404 NOT FOUND\r\nContent-Type: text/plain\r\n\r\nResource not found\r\n\r\n";
-               }
-          printf("Sent back: %s",response.c_str());
+          try {
+               const std::string content_length_header = response_struct.headers.at("Content-Length");
+               response_size = std::stoi(content_length_header);
+          }catch (std::out_of_range ex) {
+               std::cout << "Couldn't retrevie Content-Length header: "<< ex.what();
+          }catch (std::invalid_argument ex ) {
+               std::cout << ex.what();
           }
 
-          memset(rec_buf,0,BUFFER_LEN);
-
-          error_code = send(client_socket, response.c_str(),response.length(), 0);
+          error_code = send(client_socket, response_struct.toString().c_str(),response_size, 0);
 
           if (error_code == SOCKET_ERROR) {
                closesocket(client_socket);

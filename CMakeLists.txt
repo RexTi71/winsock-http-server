@@ -9,5 +9,6 @@ add_executable(webserver src/main.cpp
         src/sockets/web_socket_exception.cpp
         src/parsers/http_request.cpp
         src/parsers/http_response.cpp
+        src/utils/logger.cpp
 )
 target_link_libraries(webserver PRIVATE ws2_32)

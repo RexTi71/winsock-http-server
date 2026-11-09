@@ -7,6 +7,8 @@
 #include <string>
 #include <map>
 
+#include "http_request.h"
+
 namespace http_request {
     enum Method {
         Get,
@@ -21,6 +23,7 @@ namespace http_request {
     struct request {
         Method method;
         std::string url;
+        std::map<std::string, std::string> parameters;
         std::string version;
         std::map<std::string,std::string> headers;
         std::string body;

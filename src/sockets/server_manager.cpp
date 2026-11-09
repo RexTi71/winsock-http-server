@@ -2,7 +2,7 @@
 // Created by Dom on 6.11.2026.
 //
 
-#include "sockets.h"
+#include "server_manager.h"
 
 #include <format>
 #include <cstdio>
@@ -13,21 +13,22 @@
 #include "web_socket_exception.h"
 #include "../parsers/http_request.h"
 #include "../parsers/http_response.h"
+#include "../utils/logger.h"
 
 #define PORT "6702"
 #define BUFFER_LEN 4096
 
-SocketManager::SocketManager() {
+ServerManager::ServerManager() {
      error_code = WSAStartup(MAKEWORD(2,2),&wsa_data);
      if (error_code != 0) {
           throw WebSocketException(std::format("Could not start socket, error code: {}", error_code));
      }
 }
-SocketManager::~SocketManager() {
+ServerManager::~ServerManager() {
      WSACleanup();
 }
 
-void SocketManager::createSocket() {
+void ServerManager::startServer() {
      //Tworzenie informacji o socket
      addrinfo* result = nullptr;
      addrinfo hints{};
@@ -52,12 +53,12 @@ void SocketManager::createSocket() {
      listenOnIpAddress();
      SOCKET client_socket = INVALID_SOCKET;
      acceptingConnection(client_socket);
-     receiveRequest(client_socket);
+
      closeConnection(client_socket);
      closesocket(client_socket);
 }
 
-void SocketManager::bindSocket(addrinfo* result) {
+void ServerManager::bindSocket(addrinfo* result) {
      error_code = bind(listen_socket, result->ai_addr, static_cast<int>(result->ai_addrlen));
      if (error_code == SOCKET_ERROR) {
           freeaddrinfo(result);
@@ -66,33 +67,36 @@ void SocketManager::bindSocket(addrinfo* result) {
      freeaddrinfo(result);
 }
 
-void SocketManager::listenOnIpAddress() {
+void ServerManager::listenOnIpAddress() {
      if (listen(listen_socket, SOMAXCONN) == SOCKET_ERROR) {
           throwWsaMessage("Couldn't listen on server socket");
      }
-     printf("Server is listening on port: %s\n", PORT);
+     logger::info(std::format("Server is listening on port: {}", PORT));
 }
 
-void SocketManager::acceptingConnection(SOCKET& client_socket) {
+void ServerManager::acceptingConnection(SOCKET& client_socket) {
      sockaddr_in connecting_address;
      socklen_t connecting_adress_len = sizeof(connecting_address);
-     client_socket = accept(listen_socket, (sockaddr*) &connecting_address, &connecting_adress_len);
+     while (true) {
+          client_socket = accept(listen_socket, (sockaddr*) &connecting_address, &connecting_adress_len);
 
-     if (client_socket == INVALID_SOCKET) {
-          throwWsaMessage("Couldn't setup connection handling on socket");
+          if (client_socket == INVALID_SOCKET) {
+               logger::warn("Couldn't setup connection handling on socket");
+          }
+          logger::info(std::format("Received connection from address: {}", inet_ntoa(connecting_address.sin_addr)));
+          receiveRequest(client_socket);
+          closesocket(client_socket);
      }
-     printf("Received connection from address: %s\n", inet_ntoa(connecting_address.sin_addr));
-     closesocket(listen_socket);
 }
 
-void SocketManager::throwWsaMessage(std::string message){
+void ServerManager::throwWsaMessage(std::string message){
      int wsa_err = WSAGetLastError();
+     logger::error(message + std::to_string(wsa_err));
      throw WebSocketException(std::format("{}, error code: {}",message, wsa_err));
 }
 
-void SocketManager::receiveRequest(SOCKET& client_socket) {
-     char rec_buf[BUFFER_LEN];
-     memset(rec_buf,0,BUFFER_LEN);
+void ServerManager::receiveRequest(SOCKET& client_socket) {
+     char rec_buf[BUFFER_LEN] = {};
 
      do{
           error_code = recv(client_socket, rec_buf, BUFFER_LEN, 0);
@@ -101,26 +105,19 @@ void SocketManager::receiveRequest(SOCKET& client_socket) {
                closesocket(client_socket);
                throwWsaMessage("Couldn't receive client request");
           }else if (error_code == 0) {
-               printf("Connection closed successfully!");
+               logger::info("Connection closed successfully!");
                break;
           }
 
-          printf("Received: %s",rec_buf);
+          logger::info(std::format("Received:\n{}",rec_buf));
           std::string request = rec_buf;
+
           http_request::request request_struct = http_request::parseRequest(request);
           http_response::response response_struct = http_response::createResponse(request_struct);
-          int response_size = 9999;
 
-          try {
-               const std::string content_length_header = response_struct.headers.at("Content-Length");
-               response_size = std::stoi(content_length_header);
-          }catch (std::out_of_range ex) {
-               std::cout << "Couldn't retrevie Content-Length header: "<< ex.what();
-          }catch (std::invalid_argument ex ) {
-               std::cout << ex.what();
-          }
-
-          error_code = send(client_socket, response_struct.toString().c_str(),response_size, 0);
+          std::string response_string = response_struct.toString();
+          logger::info("Sent back:\n" + response_string);
+          error_code = send(client_socket, response_string.data(),static_cast<int>(response_string.size()), 0);
 
           if (error_code == SOCKET_ERROR) {
                closesocket(client_socket);
@@ -129,7 +126,7 @@ void SocketManager::receiveRequest(SOCKET& client_socket) {
      }while (error_code > 0);
 }
 
-void SocketManager::closeConnection(SOCKET& client_socket) {
+void ServerManager::closeConnection(SOCKET& client_socket) {
      error_code = shutdown(client_socket, SD_SEND);
      if (error_code == SOCKET_ERROR) {
           closesocket(client_socket);

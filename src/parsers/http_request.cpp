@@ -7,17 +7,36 @@
 #include <stdexcept>
 
 namespace {
+    void extractParameters(const size_t parameters_start, const std::string& request,
+    std::map<std::string,std::string>& parameters) {
+        size_t pos = parameters_start + 1;
+
+        while (pos < request.size()) {
+            size_t equal = request.find('=', pos);
+            if (equal == std::string::npos) break;
+
+            size_t amp = request.find('&', equal);
+            size_t end = (amp == std::string::npos) ? request.size() : amp;
+
+            std::string name  = request.substr(pos, equal - pos);
+            std::string value = request.substr(equal + 1, end - (equal + 1));
+            parameters[name] = value;
+
+            if (amp == std::string::npos) break;
+            pos = amp + 1;
+        }
+    }
     const std::string ENDLINE_PATTERN("\r\n");
     std::map<std::string,std::string> parseHeaders(std::string& request) {
 
         std::map<std::string,std::string> headers;
-        int line_end_index = request.find(ENDLINE_PATTERN);
-        int semicolomn_index = -1;
+        size_t line_end_index = request.find(ENDLINE_PATTERN);
+        size_t semicolomn_index = -1;
 
         do{
             semicolomn_index = request.find(':',line_end_index);
 
-            if (semicolomn_index == request.npos) {
+            if (semicolomn_index == std::string::npos) {
                 break;
             }
 
@@ -65,17 +84,23 @@ namespace http_request {
     }
     request parseRequest(std::string& request) {
 
-
         //TODO: zapobieganie blednym requestem, nie zawsze dostane to co chce
         http_request::request request_struct;
 
-        const int FIRST_SPACE = request.find(' ');
+        const size_t FIRST_SPACE = request.find(' ');
         request_struct.method = convertStrToMethodName(request.substr(0, FIRST_SPACE));
 
-        const int SECOND_SPACE = request.find(' ', FIRST_SPACE + 1);
-        request_struct.url = request.substr(FIRST_SPACE + 1, SECOND_SPACE - FIRST_SPACE - 1);
+        const size_t SECOND_SPACE = request.find(' ', FIRST_SPACE + 1);
+        std::string target = request.substr(FIRST_SPACE + 1, SECOND_SPACE - FIRST_SPACE - 1);
 
-        const int VERSION_INDEX = request.find("HTTP/") + 5;
+        size_t query_start = target.find('?');
+        if (query_start != std::string::npos) {
+            extractParameters(query_start, target, request_struct.parameters);
+            target.erase(query_start);
+        }
+        request_struct.url = target;
+
+        const size_t VERSION_INDEX = request.find("HTTP/") + 5;
         constexpr unsigned __int8 VERSION_LENGTH = 3;
         request_struct.version = request.substr(VERSION_INDEX,VERSION_LENGTH);
 

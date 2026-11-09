@@ -8,11 +8,11 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-class SocketManager {
+class ServerManager {
 public:
-    SocketManager();
-    ~SocketManager();
-    void createSocket();
+    ServerManager();
+    ~ServerManager();
+    void startServer();
 private:
     int error_code;
     WSAData wsa_data;

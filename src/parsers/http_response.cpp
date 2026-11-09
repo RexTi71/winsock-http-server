@@ -37,7 +37,7 @@ namespace http_response {
     response createResponse(const http_request::request& request_struct) {
         response response_struct;
         if (request_struct.method == http_request::Get) {
-            std::string file_path = ".." + request_struct.url;
+            std::string file_path = "../resources" + request_struct.url;
             std::ifstream file(file_path, std::ios::binary | std::ios::ate);
             if (file) {
                 std::streamsize file_size = file.tellg();
@@ -58,9 +58,11 @@ namespace http_response {
                 response_struct.version = HTTP_VER;
                 response_struct.status_code = Not_Found;
                 std::map<std::string, std::string> headers;
+                std::string body_string = "Resource not found";
+                headers["Content-Length"] = std::to_string(body_string.size());
                 headers["Content-Type"] = "text/plain";
                 response_struct.headers = headers;
-                response_struct.body = "Resource not found";
+                response_struct.body = body_string;
             }
             return response_struct;
         }

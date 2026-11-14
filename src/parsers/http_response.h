@@ -10,7 +10,6 @@
 #include "http_request.h"
 
 namespace http_response {
-    //TODO:dodac wiecej kodow
     enum StatusCode {
         Ok = 200,
         Accepted = 202,
@@ -19,6 +18,7 @@ namespace http_response {
         Forbidden = 403,
         Not_Found = 404
     };
+    /// converts enums name to a string
     std::string getStatusCodeName(const StatusCode& status_code);
     struct response {
         std::string version;
@@ -28,6 +28,12 @@ namespace http_response {
 
         std::string toString();
     };
+
+    /**
+     * @brief Handles creation of a viable Http response with default headers
+     * @param request_struct Parsed request (method, url, query, version...)
+     * @return response struct containing(version, status code, headers and body)
+     */
     response createResponse(const http_request::request& request_struct);
 
 }

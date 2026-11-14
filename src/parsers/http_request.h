@@ -17,6 +17,7 @@ namespace http_request {
         Put,
         Patch
     };
+    /// converts enums name to a string
     std::string getMethodName(const Method& method);
     Method convertStrToMethodName(const std::string& input);
 
@@ -29,6 +30,10 @@ namespace http_request {
         std::string body;
     };
 
+    /**
+     * @brief Converts given request to a structured type
+     * @return request struct
+     */
     request parseRequest(std::string& request);
 }
 #endif //WEBSERVER_HTTP_REQUEST_H

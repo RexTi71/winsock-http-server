@@ -13,9 +13,16 @@
 using json = nlohmann::json;
 
 namespace resource_manager {
+    ///Class controling http requests to usersrepository
     class UsersRepository {
     public:
         UsersRepository();
+
+        /**
+         * @brief Dispatches the request to the handler matching its HTTP method.
+         * @param request_struct Parsed request (method, url, query, version...)
+         * @return response as string created from given request or error message
+         */
         std::string handleRequest(const http_request::request& request_struct);
     private:
         const std::string FILE_PATH_ROOT = "../resources";
@@ -23,8 +30,8 @@ namespace resource_manager {
         std::string getRequest(const http_request::request& request_struct);
         std::string postRequest(const http_request::request& request_struct);
         std::string deleteRequest(const http_request::request& request_struct);
-        std::string patchRequest(const http_request::request& request_struct);
         std::string putRequest(const http_request::request& request_struct);
+        std::string patchRequest(const http_request::request& request_struct);
         json getJsonFromFile();
     };
 }

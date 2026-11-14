@@ -10,13 +10,16 @@
 #define INDENT 4
 using json = nlohmann::json;
 
+///
+/// 
+///
 namespace resource_manager {
     UsersRepository::UsersRepository() {
         // Dont know if i need something
     }
     std::string UsersRepository::handleRequest(const http_request::request& request_struct) {
         const http_request::Method method = request_struct.method;
-        file_path = request_struct.url;
+        file_path = FILE_PATH_ROOT + request_struct.url;
         try {
             switch (method) {
                 case http_request::Get:
@@ -25,10 +28,10 @@ namespace resource_manager {
                     return postRequest(request_struct);
                 case http_request::Delete:
                     return deleteRequest(request_struct);
-                // case http_request::Put:
-                //     return putRequest(request_struct);
-                // case http_request::Patch:
-                //     return patchRequest(request_struct);
+                case http_request::Put:
+                    return putRequest(request_struct);
+                case http_request::Patch:
+                    return patchRequest(request_struct);
                 default:
                     return "Unkown method";
             }
@@ -85,7 +88,6 @@ namespace resource_manager {
     }
 
     std::string UsersRepository::postRequest(const http_request::request& request_struct) {
-        std::string file_path = FILE_PATH_ROOT + request_struct.url;
 
         if (!json::accept(request_struct.body)) {
             logger::warn("User provided invalid json:\n" + request_struct.body);
@@ -112,10 +114,6 @@ namespace resource_manager {
     }
 
     std::string UsersRepository::deleteRequest(const http_request::request& request_struct) {
-        std::string file_path = FILE_PATH_ROOT + request_struct.url;
-        if (request_struct.parameters.size()) {
-
-        }
 
         json users = getJsonFromFile();
 
@@ -157,6 +155,90 @@ namespace resource_manager {
 
         return users_to_delete.dump(INDENT);
     }
+
+    std::string UsersRepository::putRequest(const http_request::request &request_struct) {
+        auto parameters = request_struct.parameters;
+        if (!parameters.contains("id")) {
+            return "Provided request didn't contain \" id \" parameter";
+        }
+
+        try {
+            int user_id = std::stoi(request_struct.parameters.at("id"));
+            json users = getJsonFromFile();
+            json body = json::parse(request_struct.body);
+            bool found = false;
+
+            for (auto& user : users) {
+                if (user.value("id", -1) != user_id) continue;
+                found = true;
+                body["id"] = user_id;
+                user = body;
+                break;
+            }
+
+            if (!found) {
+                body["id"] = user_id;
+                users.push_back(body);
+            }
+
+            std::ofstream users_file_out(file_path);
+            users_file_out << users.dump(INDENT);
+
+            return body.dump(INDENT);
+        }catch (const json::exception& ex) {
+            logger::warn(ex.what());
+            return "Provided body was not a valid JSON format";
+        }catch (const std::exception& ex) {
+            logger::warn(ex.what());
+            return "Couldn't read \"id\" parameter";
+        }
+
+    }
+
+    std::string UsersRepository::patchRequest(const http_request::request &request_struct) {
+        auto parameters = request_struct.parameters;
+        if (!parameters.contains("id")) {
+            return "Provided request didn't contain \"id\" parameter";
+        }
+
+        try {
+            int user_id = std::stoi(request_struct.parameters.at("id"));
+            json users = getJsonFromFile();
+            json body = json::parse(request_struct.body);
+            json updated_user;
+
+            for (auto& user : users) {
+                if (user["id"] == user_id) {
+                    // Looping through every body elements to update the existing users.json
+                    for (auto& [key, value]: body.items()) {
+                        //Protection for extra "
+                        if (key == "id" || !user.contains(key)) {
+                            continue;
+                        }
+                        user[key] = value;
+                        updated_user.push_back(json::object_t::value_type(key, value));
+                    }
+                    break;
+                }
+            }
+
+            if (updated_user.empty()) {
+                return "Fields with given properties didn't exist in user";
+            }
+
+            std::ofstream users_file_out(file_path);
+            users_file_out << users.dump(INDENT);
+
+            return updated_user.dump(INDENT);
+        }catch (const json::exception& ex) {
+            logger::warn(ex.what());
+            return "Provided body was not a valid JSON format";
+        }catch (const std::exception& ex) {
+            logger::warn(ex.what());
+            return "Couldn't read \"id\" parameter";
+        }
+    }
+
     json UsersRepository::getJsonFromFile() {
         std::ifstream file(file_path);
         if (file.is_open()) {

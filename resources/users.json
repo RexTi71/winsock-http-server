@@ -1,14 +1,20 @@
 [
-  {
-    "id": 1,
-    "username": "jacob123",
-    "password": "1234",
-    "age": 19
-  },
-  {
-    "id": 2,
-    "username": "nicole52",
-    "password": "hardpassword12",
-    "age": 25
-  }
+    {
+        "age": 19,
+        "id": 1,
+        "password": "goodbye world",
+        "username": "john51"
+    },
+    {
+        "age": 25,
+        "id": 2,
+        "password": "wholosomecats25",
+        "username": "jane32"
+    },
+    {
+        "age": 25,
+        "id": 3,
+        "password": "goodbye world",
+        "username": "john51"
+    }
 ]

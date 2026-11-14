@@ -10,14 +10,11 @@
 #define INDENT 4
 using json = nlohmann::json;
 
-///
-/// 
-///
 namespace resource_manager {
     UsersRepository::UsersRepository() {
         // Dont know if i need something
     }
-    std::string UsersRepository::handleRequest(const http_request::request& request_struct) {
+    result UsersRepository::handleRequest(const http_request::request& request_struct) {
         const http_request::Method method = request_struct.method;
         file_path = FILE_PATH_ROOT + request_struct.url;
         try {
@@ -33,15 +30,15 @@ namespace resource_manager {
                 case http_request::Patch:
                     return patchRequest(request_struct);
                 default:
-                    return "Unkown method";
+                    return {.status_code = http_response::Not_Found, .body = "Unkown method"};
             }
         }catch (const std::exception& ex) {
             logger::error(ex.what());
-            return "Internal error";
+            return {.status_code =http_response::Internal_Server_Error, .body = "Internal error"};
         }
 
     }
-    std::string UsersRepository::getRequest(const http_request::request& request_struct) {
+    result UsersRepository::getRequest(const http_request::request& request_struct) {
         json js;
 
         if (file_path.ends_with(".json")) {
@@ -54,7 +51,7 @@ namespace resource_manager {
 
                 std::string body(file_size, '\0');
                 file.read(body.data(), file_size);
-                return body;
+                return {.status_code = http_response::Ok, .body = body};
             }
 
             throw std::runtime_error("Requested file not found");
@@ -63,7 +60,7 @@ namespace resource_manager {
         auto parameters = request_struct.parameters;
 
         if (parameters.empty()) {
-            return js.dump(INDENT);
+            return {.status_code = http_response::Ok, .body = js.dump(INDENT)};
         }
 
         json result;
@@ -84,14 +81,14 @@ namespace resource_manager {
             }
 
         }
-        return result.dump(INDENT);
+        return {.status_code = http_response::Ok, .body = result.dump(INDENT)};
     }
 
-    std::string UsersRepository::postRequest(const http_request::request& request_struct) {
+    result UsersRepository::postRequest(const http_request::request& request_struct) {
 
         if (!json::accept(request_struct.body)) {
             logger::warn("User provided invalid json:\n" + request_struct.body);
-            return "Provided JSON input was not valid";
+            return {.status_code = http_response::Forbidden, .body = "Provided JSON input was not valid"};
         }
 
         json new_user = json::parse(request_struct.body);
@@ -107,20 +104,20 @@ namespace resource_manager {
 
         }else {
             logger::warn("Couldn't open file with path: " + file_path);
-            return "Failed to open file";
+            throw std::runtime_error("Failed to open file");
         }
 
-        return new_user.dump(INDENT);
+        return {.status_code = http_response::Created, .body = new_user.dump(INDENT)};
     }
 
-    std::string UsersRepository::deleteRequest(const http_request::request& request_struct) {
+    result UsersRepository::deleteRequest(const http_request::request& request_struct) {
 
         json users = getJsonFromFile();
 
         auto parameters = request_struct.parameters;
 
         if (parameters.empty()) {
-            return "Request missing parameters";
+            return {.status_code = http_response::Bad_Request, .body = "Request missing parameters"};
         }
 
         json remaining = json::array();
@@ -153,20 +150,20 @@ namespace resource_manager {
         std::ofstream users_file_out(file_path);
         users_file_out << users.dump(INDENT);
 
-        return users_to_delete.dump(INDENT);
+        return {.status_code = http_response::Ok, .body = users_to_delete.dump(INDENT)};
     }
 
-    std::string UsersRepository::putRequest(const http_request::request &request_struct) {
+    result UsersRepository::putRequest(const http_request::request &request_struct) {
         auto parameters = request_struct.parameters;
         if (!parameters.contains("id")) {
-            return "Provided request didn't contain \" id \" parameter";
+            return {.status_code = http_response::Bad_Request, .body = "Provided request didn't contain \"id\" parameter"};
         }
 
         try {
             int user_id = std::stoi(request_struct.parameters.at("id"));
             json users = getJsonFromFile();
             json body = json::parse(request_struct.body);
-            bool found = false;
+            bool found = false, created = false;
 
             for (auto& user : users) {
                 if (user.value("id", -1) != user_id) continue;
@@ -179,26 +176,31 @@ namespace resource_manager {
             if (!found) {
                 body["id"] = user_id;
                 users.push_back(body);
+                created = true;
             }
 
             std::ofstream users_file_out(file_path);
             users_file_out << users.dump(INDENT);
 
-            return body.dump(INDENT);
+            if (created) {
+                return {.status_code = http_response::Created, .body = body.dump(INDENT)};
+            }
+
+            return {.status_code = http_response::Ok, .body = body.dump(INDENT)};
         }catch (const json::exception& ex) {
             logger::warn(ex.what());
-            return "Provided body was not a valid JSON format";
+            return {.status_code = http_response::Bad_Request, .body = "Provided body was not a valid JSON format"};
         }catch (const std::exception& ex) {
             logger::warn(ex.what());
-            return "Couldn't read \"id\" parameter";
+            throw std::runtime_error("Couldn't read \"id\" parameter");
         }
 
     }
 
-    std::string UsersRepository::patchRequest(const http_request::request &request_struct) {
+    result UsersRepository::patchRequest(const http_request::request &request_struct) {
         auto parameters = request_struct.parameters;
         if (!parameters.contains("id")) {
-            return "Provided request didn't contain \"id\" parameter";
+            return {.status_code = http_response::Bad_Request, .body = "Provided request didn't contain \"id\" parameter"};
         }
 
         try {
@@ -223,23 +225,23 @@ namespace resource_manager {
             }
 
             if (updated_user.empty()) {
-                return "Fields with given properties didn't exist in user";
+                return {.status_code = http_response::Bad_Request, .body = "Fields with given properties didn't exist in user"};
             }
 
             std::ofstream users_file_out(file_path);
             users_file_out << users.dump(INDENT);
 
-            return updated_user.dump(INDENT);
+            return {.status_code = http_response::Ok, .body = updated_user.dump(INDENT)};
         }catch (const json::exception& ex) {
             logger::warn(ex.what());
-            return "Provided body was not a valid JSON format";
+            return {.status_code = http_response::Bad_Request, .body = "Provided body was not a valid JSON format"};
         }catch (const std::exception& ex) {
             logger::warn(ex.what());
-            return "Couldn't read \"id\" parameter";
+            throw std::runtime_error("Couldn't read \"id\" parameter");
         }
     }
 
-    json UsersRepository::getJsonFromFile() {
+    json UsersRepository::getJsonFromFile() const{
         std::ifstream file(file_path);
         if (file.is_open()) {
             return json::parse(file);

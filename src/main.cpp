@@ -9,8 +9,12 @@
 
 int main() {
 
-    ServerManager server_manager;
-    server_manager.startServer();
+    try {
+        ServerManager server_manager;
+        server_manager.startServer();
+    }catch (const std::exception& ex) {
+        logger::warn(ex.what());
+    }
 
     return 0;
 }

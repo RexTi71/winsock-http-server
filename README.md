@@ -1,0 +1,2 @@
+curl -X DELETE "127.0.0.1:6702/users.json?id=3"
+curl 127.0.0.1:6702/users.json --header "Content-Type: application/json" --request POST --data "{\"id\": 1, \"age\": 25, \"username\": \"David62\", \"password\":\"xkjzf\"}"

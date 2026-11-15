@@ -14,6 +14,7 @@
 #include "../parsers/http_request.h"
 #include "../parsers/http_response.h"
 #include "../utils/logger.h"
+#include "../services/resource_manager.h"
 
 #define PORT "6702"
 #define BUFFER_LEN 4096
@@ -113,7 +114,8 @@ void ServerManager::receiveRequest(SOCKET& client_socket) {
           std::string request = rec_buf;
 
           http_request::request request_struct = http_request::parseRequest(request);
-          http_response::response response_struct = http_response::createResponse(request_struct);
+          resource_manager::UsersRepository users_repository;
+          http_response::response response_struct = http_response::createResponse(request_struct, users_repository);
 
           std::string response_string = response_struct.toString();
           logger::info("Sent back:\n" + response_string);

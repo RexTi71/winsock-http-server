@@ -19,9 +19,13 @@ namespace resource_manager {
         http_response::StatusCode status_code;
         std::string body;
     };
-
+    class Repository {
+    public:
+        virtual ~Repository() = default;
+        virtual result handleRequest(const http_request::request& request_struct) = 0;
+    };
     ///Class controling http requests to users repository
-    class UsersRepository {
+    class UsersRepository : public Repository{
     public:
         UsersRepository();
 
@@ -30,7 +34,7 @@ namespace resource_manager {
          * @param request_struct Parsed request (method, url, query, version...)
          * @return result containing status code and string body, created from given request or error message
          */
-        result handleRequest(const http_request::request& request_struct);
+        result handleRequest(const http_request::request& request_struct) override;
     private:
         const std::string FILE_PATH_ROOT = "../resources";
         std::string file_path;

@@ -9,6 +9,10 @@
 #include <format>
 #include "http_request.h"
 
+namespace resource_manager {
+    class Repository;
+}
+
 namespace http_response {
     enum StatusCode {
         Ok = 200,
@@ -34,9 +38,10 @@ namespace http_response {
     /**
      * @brief Handles creation of a viable Http response with default headers
      * @param request_struct Parsed request (method, url, query, version...)
+     * @param repository Context for repository handler
      * @return response struct containing(version, status code, headers and body)
      */
-    response createResponse(const http_request::request& request_struct);
+    response createResponse(const http_request::request& request_struct, resource_manager::Repository& repository);
 
 }
 #endif //WEBSERVER_HTTP_RESPONSE_H

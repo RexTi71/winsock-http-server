@@ -12,11 +12,11 @@ namespace {
         size_t pos = parameters_start + 1;
 
         while (pos < request.size()) {
-            size_t equal = request.find('=', pos);
+            const size_t equal = request.find('=', pos);
             if (equal == std::string::npos) break;
 
-            size_t amp = request.find('&', equal);
-            size_t end = (amp == std::string::npos) ? request.size() : amp;
+            const size_t amp = request.find('&', equal);
+            const size_t end = (amp == std::string::npos) ? request.size() : amp;
 
             std::string name  = request.substr(pos, equal - pos);
             std::string value = request.substr(equal + 1, end - (equal + 1));
@@ -26,7 +26,8 @@ namespace {
             pos = amp + 1;
         }
     }
-    const std::string ENDLINE_PATTERN("\r\n");
+
+    constexpr std::string ENDLINE_PATTERN("\r\n");
     std::map<std::string,std::string> parseHeaders(std::string& request) {
 
         std::map<std::string,std::string> headers;
@@ -44,12 +45,12 @@ namespace {
                 semicolomn_index - (line_end_index + ENDLINE_PATTERN.length()));
             line_end_index = request.find(ENDLINE_PATTERN, semicolomn_index);
             //Uwzgledniamy spacje przy headerach Host: 127.0.0.1...
-            std::string header_value = request.substr(semicolomn_index + 2, line_end_index - (semicolomn_index + 2));
+            const std::string header_value = request.substr(semicolomn_index + 2, line_end_index - (semicolomn_index + 2));
             headers[header_name] = header_value;
-        }while(semicolomn_index != request.npos);
+        }while(semicolomn_index != std::string::npos);
         return headers;
     }
-    std::string parseBody(std::string& request) {
+    std::string parseBody(const std::string& request) {
         const unsigned __int8 BODY_START_INDEX = request.find_last_of(ENDLINE_PATTERN) + ENDLINE_PATTERN.length() - 1;
         return request.substr(BODY_START_INDEX);
     }
@@ -86,10 +87,10 @@ namespace http_request {
 
         //TODO: zapobieganie blednym requestem, nie zawsze dostane to co chce
         http_request::request request_struct;
-
+        //Metoda
         const size_t FIRST_SPACE = request.find(' ');
         request_struct.method = convertStrToMethodName(request.substr(0, FIRST_SPACE));
-
+        //Query parametry
         const size_t SECOND_SPACE = request.find(' ', FIRST_SPACE + 1);
         std::string target = request.substr(FIRST_SPACE + 1, SECOND_SPACE - FIRST_SPACE - 1);
 
@@ -98,6 +99,7 @@ namespace http_request {
             extractParameters(query_start, target, request_struct.parameters);
             target.erase(query_start);
         }
+
         request_struct.url = target;
 
         const size_t VERSION_INDEX = request.find("HTTP/") + 5;

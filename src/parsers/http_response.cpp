@@ -3,8 +3,8 @@
 //
 
 #include "http_response.h"
-
 #include "../services/resource_manager.h"
+
 #define HTTP_VER "1.1"
 namespace http_response {
     std::string getStatusCodeName(const StatusCode& status_code) {
@@ -36,13 +36,12 @@ namespace http_response {
         return result;
     }
 
-    response createResponse(const http_request::request& request_struct) {
+    response createResponse(const http_request::request& request_struct, resource_manager::Repository& repository) {
         response response_struct;
         std::map<std::string, std::string> headers;
         response_struct.version = HTTP_VER;
-        resource_manager::UsersRepository users_repository;
 
-        resource_manager::result request_result = users_repository.handleRequest(request_struct);
+        resource_manager::result request_result = repository.handleRequest(request_struct);
         response_struct.body = request_result.body;
         response_struct.status_code = request_result.status_code;
 

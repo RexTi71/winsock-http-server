@@ -13,20 +13,21 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-add_executable(webserver src/main.cpp
-        src/sockets/server_manager.cpp
-        src/sockets/web_socket_exception.cpp
-        src/parsers/http_request.cpp
-        src/parsers/http_response.cpp
-        src/utils/logger.cpp
-        src/services/resource_manager.cpp
-)
-target_link_libraries(webserver PRIVATE ws2_32)
-target_link_libraries(webserver PRIVATE nlohmann_json::nlohmann_json)
+file(GLOB_RECURSE SOURCES src/*.cpp)
+list(FILTER SOURCES EXCLUDE REGEX "main\\.cpp$")
+
+add_library(core ${SOURCES})
+target_link_libraries(core PUBLIC nlohmann_json::nlohmann_json)
+if(WIN32)
+    target_link_libraries(core PUBLIC ws2_32)
+endif()
+
+add_executable(webserver src/main.cpp)
+target_link_libraries(webserver PRIVATE core)
 
 enable_testing()
 add_executable(tests tests/parsers/http_response_test.cpp)
-target_link_libraries(tests PRIVATE GTest::gtest_main)
+target_link_libraries(tests PRIVATE core GTest::gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(tests)

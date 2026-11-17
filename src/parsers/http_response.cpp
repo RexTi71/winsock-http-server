@@ -42,6 +42,7 @@ namespace http_response {
         response_struct.version = HTTP_VER;
 
         resource_manager::result request_result = repository.handleRequest(request_struct);
+
         response_struct.body = request_result.body;
         response_struct.status_code = request_result.status_code;
 
@@ -56,36 +57,5 @@ namespace http_response {
         headers["Content-Length"] = std::to_string(response_struct.body.size());
         response_struct.headers = headers;
         return response_struct;
-        // if (request_struct.method == http_request::Get) {
-        //     std::string file_path = "../resources" + request_struct.url;
-        //     std::ifstream file(file_path, std::ios::binary | std::ios::ate);
-        //     if (file) {
-        //         std::streamsize file_size = file.tellg();
-        //         file.seekg(0, std::ios::beg);
-        //
-        //         std::string body(file_size, '\0');
-        //         file.read(body.data(), file_size);
-        //
-        //
-        //         response_struct.version = HTTP_VER;
-        //         response_struct.status_code = Ok;
-        //         std::map<std::string, std::string> headers;
-        //         response_struct.body = body;
-        //         headers["Content-Length"] = std::to_string(file_size);
-        //         headers["Content-Type"] = "text/html; charset=UTF-8";
-        //         response_struct.headers = headers;
-        //     }else {
-        //         response_struct.version = HTTP_VER;
-        //         response_struct.status_code = Not_Found;
-        //         std::map<std::string, std::string> headers;
-        //         std::string body_string = "Resource not found";
-        //         headers["Content-Length"] = std::to_string(body_string.size());
-        //         headers["Content-Type"] = "text/plain";
-        //         response_struct.headers = headers;
-        //         response_struct.body = body_string;
-        //     }
-        //     return response_struct;
-        // }
-
     }
 }

@@ -10,7 +10,7 @@
 #include "http_request.h"
 
 namespace resource_manager {
-    class Repository;
+    class IRepository;
 }
 
 namespace http_response {
@@ -41,7 +41,7 @@ namespace http_response {
      * @param repository Context for repository handler
      * @return response struct containing(version, status code, headers and body)
      */
-    response createResponse(const http_request::request& request_struct, resource_manager::Repository& repository);
+    response createResponse(const http_request::request& request_struct, resource_manager::IRepository& repository);
 
 }
 #endif //WEBSERVER_HTTP_RESPONSE_H

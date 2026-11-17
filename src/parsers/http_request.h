@@ -15,7 +15,8 @@ namespace http_request {
         Post,
         Delete,
         Put,
-        Patch
+        Patch,
+        Unknown
     };
     /// converts enums name to a string
     std::string getMethodName(const Method& method);

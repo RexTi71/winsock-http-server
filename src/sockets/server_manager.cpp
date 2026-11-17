@@ -114,7 +114,8 @@ void ServerManager::receiveRequest(SOCKET& client_socket) {
           std::string request = rec_buf;
 
           http_request::request request_struct = http_request::parseRequest(request);
-          resource_manager::UsersRepository users_repository;
+          resource_manager::JsonManager json_manager;
+          resource_manager::UsersRepository users_repository{json_manager};
           http_response::response response_struct = http_response::createResponse(request_struct, users_repository);
 
           std::string response_string = response_struct.toString();

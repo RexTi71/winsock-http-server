@@ -7,7 +7,7 @@
 #include "../../src/services/resource_manager.h"
 namespace {
 
-class FakeRepository : public resource_manager::Repository {
+class FakeRepository : public resource_manager::IRepository {
 public:
     resource_manager::result next;
     resource_manager::result handleRequest(const http_request::request&) override {

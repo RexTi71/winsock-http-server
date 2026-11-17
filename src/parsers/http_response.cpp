@@ -36,11 +36,10 @@ namespace http_response {
         return result;
     }
 
-    response createResponse(const http_request::request& request_struct, resource_manager::Repository& repository) {
+    response createResponse(const http_request::request& request_struct, resource_manager::IRepository& repository) {
         response response_struct;
         std::map<std::string, std::string> headers;
-        response_struct.version = HTTP_VER;
-
+        response_struct.version = "1.1";
         resource_manager::result request_result = repository.handleRequest(request_struct);
 
         response_struct.body = request_result.body;

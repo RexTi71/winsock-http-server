@@ -26,7 +26,8 @@ add_executable(webserver src/main.cpp)
 target_link_libraries(webserver PRIVATE core)
 
 enable_testing()
-add_executable(tests tests/parsers/http_response_test.cpp)
+add_executable(tests tests/parsers/http_response_test.cpp
+        tests/services/resource_manager_test.cpp)
 target_link_libraries(tests PRIVATE core GTest::gtest_main)
 
 include(GoogleTest)

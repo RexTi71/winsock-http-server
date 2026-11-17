@@ -11,34 +11,37 @@
 using json = nlohmann::json;
 
 namespace resource_manager {
-    UsersRepository::UsersRepository() {
-        // Dont know if i need something
-    }
     result UsersRepository::handleRequest(const http_request::request& request_struct) {
         const http_request::Method method = request_struct.method;
-        file_path = FILE_PATH_ROOT + request_struct.url;
+        manager.setFilePath(request_struct.url);
+
         try {
             switch (method) {
                 case http_request::Get:
-                    return getRequest(request_struct);
+                    return manager.getRequest(request_struct);
                 case http_request::Post:
-                    return postRequest(request_struct);
+                    return manager.postRequest(request_struct);
                 case http_request::Delete:
-                    return deleteRequest(request_struct);
+                    return manager.deleteRequest(request_struct);
                 case http_request::Put:
-                    return putRequest(request_struct);
+                    return manager.putRequest(request_struct);
                 case http_request::Patch:
-                    return patchRequest(request_struct);
+                    return manager.patchRequest(request_struct);
                 default:
-                    return {.status_code = http_response::Not_Found, .body = "Unkown method"};
+                    return {.status_code = http_response::Not_Found, .body = "Unknown Method"};
             }
         }catch (const std::exception& ex) {
             logger::error(ex.what());
-            return {.status_code =http_response::Internal_Server_Error, .body = "Internal error"};
+            return {.status_code = http_response::Internal_Server_Error, .body = "Internal error"};
         }
 
     }
-    result UsersRepository::getRequest(const http_request::request& request_struct) {
+
+    void JsonManager::setFilePath(const std::string &file_path) {
+        this->file_path = FILE_PATH_ROOT + file_path;
+    }
+
+    result JsonManager::getRequest(const http_request::request& request_struct) {
         json js;
 
         if (file_path.ends_with(".json")) {
@@ -84,7 +87,7 @@ namespace resource_manager {
         return {.status_code = http_response::Ok, .body = result.dump(INDENT)};
     }
 
-    result UsersRepository::postRequest(const http_request::request& request_struct) {
+    result JsonManager::postRequest(const http_request::request& request_struct) {
 
         if (!json::accept(request_struct.body)) {
             logger::warn("User provided invalid json:\n" + request_struct.body);
@@ -110,7 +113,7 @@ namespace resource_manager {
         return {.status_code = http_response::Created, .body = new_user.dump(INDENT)};
     }
 
-    result UsersRepository::deleteRequest(const http_request::request& request_struct) {
+    result JsonManager::deleteRequest(const http_request::request& request_struct) {
 
         json users = getJsonFromFile();
 
@@ -153,7 +156,7 @@ namespace resource_manager {
         return {.status_code = http_response::Ok, .body = users_to_delete.dump(INDENT)};
     }
 
-    result UsersRepository::putRequest(const http_request::request &request_struct) {
+    result JsonManager::putRequest(const http_request::request &request_struct) {
         auto parameters = request_struct.parameters;
         if (!parameters.contains("id")) {
             return {.status_code = http_response::Bad_Request, .body = "Provided request didn't contain \"id\" parameter"};
@@ -197,7 +200,7 @@ namespace resource_manager {
 
     }
 
-    result UsersRepository::patchRequest(const http_request::request &request_struct) {
+    result JsonManager::patchRequest(const http_request::request &request_struct) {
         auto parameters = request_struct.parameters;
         if (!parameters.contains("id")) {
             return {.status_code = http_response::Bad_Request, .body = "Provided request didn't contain \"id\" parameter"};
@@ -241,11 +244,12 @@ namespace resource_manager {
         }
     }
 
-    json UsersRepository::getJsonFromFile() const{
+    json JsonManager::getJsonFromFile() const{
         std::ifstream file(file_path);
         if (file.is_open()) {
             return json::parse(file);
         }
         throw std::runtime_error( "Couldn't open file with path: " + file_path);
     }
+
 }

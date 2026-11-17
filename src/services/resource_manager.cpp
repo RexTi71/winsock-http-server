@@ -210,31 +210,31 @@ namespace resource_manager {
             int user_id = std::stoi(request_struct.parameters.at("id"));
             json users = getJsonFromFile();
             json body = json::parse(request_struct.body);
-            json updated_user;
+            json* patched_user = nullptr;
+            bool changed = false;
 
             for (auto& user : users) {
-                if (user["id"] == user_id) {
-                    // Looping through every body elements to update the existing users.json
-                    for (auto& [key, value]: body.items()) {
-                        //Protection for extra "
+                if (user.value("id", -1) == user_id) {
+                    patched_user = &user;
+                    for (auto& [key, value] : body.items()) {
                         if (key == "id" || !user.contains(key)) {
                             continue;
                         }
                         user[key] = value;
-                        updated_user.push_back(json::object_t::value_type(key, value));
+                        changed = true;
                     }
                     break;
                 }
             }
 
-            if (updated_user.empty()) {
+            if (!changed) {
                 return {.status_code = http_response::Bad_Request, .body = "Fields with given properties didn't exist in user"};
             }
 
             std::ofstream users_file_out(file_path);
             users_file_out << users.dump(INDENT);
 
-            return {.status_code = http_response::Ok, .body = updated_user.dump(INDENT)};
+            return {.status_code = http_response::Ok, .body = patched_user->dump(INDENT)};
         }catch (const json::exception& ex) {
             logger::warn(ex.what());
             return {.status_code = http_response::Bad_Request, .body = "Provided body was not a valid JSON format"};

@@ -60,7 +60,6 @@ namespace resource_manager {
         /**
          * @brief Dispatches the request to the handler matching its HTTP method.
          * @param request_struct Parsed request (method, url, query, version...)
-         * @param manager Class implementation of FileManager for handling file operations
          * @return result containing status code and string body, created from given request or error message
          */
         result handleRequest(const http_request::request& request_struct) override;

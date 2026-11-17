@@ -9,6 +9,7 @@
 
 int main() {
 
+    //Server initialization
     try {
         ServerManager server_manager;
         server_manager.startServer();

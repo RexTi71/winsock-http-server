@@ -30,7 +30,8 @@ ServerManager::~ServerManager() {
 }
 
 void ServerManager::startServer() {
-     //Tworzenie informacji o socket
+
+     //Creation of socket information
      addrinfo* result = nullptr;
      addrinfo hints{};
      hints.ai_flags = AI_PASSIVE;
@@ -43,6 +44,7 @@ void ServerManager::startServer() {
           throw WebSocketException(std::format("Couldn't translate address info, error code: {}", error_code));
      }
 
+     //Creation of socket
      listen_socket = socket(result->ai_family,
           result->ai_socktype,
           result->ai_protocol);
@@ -50,6 +52,7 @@ void ServerManager::startServer() {
           freeaddrinfo(result);
           throwWsaMessage("Couldn't create listen socket on given parameters");
      }
+
      bindSocket(result);
      listenOnIpAddress();
      SOCKET client_socket = INVALID_SOCKET;
@@ -78,6 +81,8 @@ void ServerManager::listenOnIpAddress() {
 void ServerManager::acceptingConnection(SOCKET& client_socket) {
      sockaddr_in connecting_address;
      socklen_t connecting_adress_len = sizeof(connecting_address);
+
+     //Main server loop
      while (true) {
           client_socket = accept(listen_socket, (sockaddr*) &connecting_address, &connecting_adress_len);
 

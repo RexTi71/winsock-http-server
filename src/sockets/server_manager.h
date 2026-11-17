@@ -7,6 +7,7 @@
 #include <string>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include "web_socket_exception.h"
 
 /// Handles socket creation, http requests and responses
 class ServerManager {
@@ -15,7 +16,9 @@ public:
     ~ServerManager();
 
 
-    ///Creates, binds sockets, listens for any requests and responds
+    /**Creates, binds sockets, listens for any requests and responds
+     * @throws WebSocketException if any of creation steps fails
+    */
     void startServer();
 private:
     int error_code;

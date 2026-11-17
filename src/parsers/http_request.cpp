@@ -30,10 +30,12 @@ namespace {
     constexpr std::string ENDLINE_PATTERN("\r\n");
     std::map<std::string,std::string> parseHeaders(std::string& request) {
 
+        //Result variable initialization
         std::map<std::string,std::string> headers;
         size_t line_end_index = request.find(ENDLINE_PATTERN);
         size_t semicolomn_index = -1;
 
+        //Iteration over headers
         do{
             semicolomn_index = request.find(':',line_end_index);
 
@@ -44,15 +46,17 @@ namespace {
             std::string header_name = request.substr(line_end_index + ENDLINE_PATTERN.length(),
                 semicolomn_index - (line_end_index + ENDLINE_PATTERN.length()));
             line_end_index = request.find(ENDLINE_PATTERN, semicolomn_index);
-            //Uwzgledniamy spacje przy headerach Host: 127.0.0.1...
+
+            //We take notice of whitespace on header Host: 127.0.0.1...
             const std::string header_value = request.substr(semicolomn_index + 2, line_end_index - (semicolomn_index + 2));
             headers[header_name] = header_value;
         }while(semicolomn_index != std::string::npos);
         return headers;
     }
     std::string parseBody(const std::string& request) {
-        const unsigned __int8 BODY_START_INDEX = request.find_last_of(ENDLINE_PATTERN) + ENDLINE_PATTERN.length() - 1;
-        return request.substr(BODY_START_INDEX);
+        const size_t HEADERS_END = request.find("\r\n\r\n");
+        if (HEADERS_END == std::string::npos) return "";
+        return request.substr(HEADERS_END + 4);
     }
 }
 namespace http_request {
@@ -85,12 +89,13 @@ namespace http_request {
     }
     request parseRequest(std::string& request) {
 
-        //TODO: zapobieganie blednym requestem, nie zawsze dostane to co chce
         http_request::request request_struct;
-        //Metoda
+
+        //Method
         const size_t FIRST_SPACE = request.find(' ');
         request_struct.method = convertStrToMethodName(request.substr(0, FIRST_SPACE));
-        //Query parametry
+
+        //Query parameters
         const size_t SECOND_SPACE = request.find(' ', FIRST_SPACE + 1);
         std::string target = request.substr(FIRST_SPACE + 1, SECOND_SPACE - FIRST_SPACE - 1);
 
@@ -100,17 +105,21 @@ namespace http_request {
             target.erase(query_start);
         }
 
+        //Url of request
         request_struct.url = target;
 
+        //Http version
         const size_t VERSION_INDEX = request.find("HTTP/") + 5;
         constexpr unsigned __int8 VERSION_LENGTH = 3;
         request_struct.version = request.substr(VERSION_INDEX,VERSION_LENGTH);
 
         request_struct.headers = parseHeaders(request);
 
-        if (request_struct.method == Post) {
+        if (request_struct.method == Post ||
+            request_struct.method == Put ||
+            request_struct.method == Patch) {
             request_struct.body = parseBody(request);
-        }
+            }
         return request_struct;
     }
 }

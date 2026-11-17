@@ -7,6 +7,8 @@
 #include <exception>
 #include <string>
 
+
+///Thrown when server encounters any problem during socket operations
 class WebSocketException : public std::exception {
 public:
     explicit WebSocketException(const std::string& message):msg(message){}

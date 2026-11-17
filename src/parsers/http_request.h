@@ -10,6 +10,7 @@
 #include "http_request.h"
 
 namespace http_request {
+    ///Enum containing available HTTP Methods
     enum Method {
         Get,
         Post,
@@ -18,10 +19,11 @@ namespace http_request {
         Patch,
         Unknown
     };
-    /// converts enums name to a string
+    /// Converts enums name to a string
     std::string getMethodName(const Method& method);
     Method convertStrToMethodName(const std::string& input);
 
+    ///Struct containing necessary info about request
     struct request {
         Method method;
         std::string url;

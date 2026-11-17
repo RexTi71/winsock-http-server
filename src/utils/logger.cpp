@@ -11,7 +11,7 @@
 namespace {
 
 void log(const Level& level, const std::string& message) {
-    HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+    const HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
     auto now = std::chrono::floor<std::chrono::milliseconds>(
                    std::chrono::system_clock::now());
     std::string timestamp = std::format("{:%Y-%m-%d %H:%M:%S}", now);
